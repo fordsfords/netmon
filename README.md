@@ -12,14 +12,6 @@ Monitoring script for hosts running UDP-intensive applications.
 - [Log File Fixed](#log-file-fixed)
 - [Graceful Exit](#graceful-exit)
 - [License](#license)
-- [Table of contents](#table-of-contents)
-- [Introduction](#introduction)
-- [Usage:](#usage)
-- [Configuration](#configuration)
-- [Log File Rolling](#log-file-rolling)
-- [Log File Fixed](#log-file-fixed)
-- [Graceful Exit](#graceful-exit)
-- [License](#license)
 <sup>(table of contents from https://luciopaiva.com/markdown-toc/)</sup>
 
 # Introduction
@@ -40,13 +32,13 @@ remember for the future.
 
 Here's the help:
 ````
-Usage: netmon.sh [-h] [-i intfc] [-l logfile] [-p prefix] [-s sleep]
+Usage: netmon.sh [-h] [-i intfc] [-l logfile] [-p prefix] [-s seconds]
 Where:
   -h help
   -i intfc - interface for ethtool; default: /tmp/netmon.intfc
   -l logfile - Log file path (no day of week appended).
   -p prefix - Prefix path, appended with day of week; default: /tmp/netmon.log
-  -s sleep - Seconds to wait between samples; default: 600 (10 min)
+  -s seconds - Seconds to wait between samples; default: 600 (10 min)
 See https://github.com/fordsfords/netmon for more information.
 ````
 
@@ -77,22 +69,21 @@ The tool will run until killed (with control-C or with "kill <pid>").
 
 The tool can be configured via command-line options
 or with environment variables.
+If both are supplied, the command-line options have priority.
 
 Item | Command-line Option | Environment Variable
 ---- | ------------------- | --------------------
-Network Interface | -i | NETMON_INTFC
-Log file name (fixed) | -l | NETMON_LOGFILE
-Prefix for log file (rolling) | -p | NETMON_PREFIX
-seconds between samples | -s | NETMON_SLEEP
+Network Interface | -i intfc | NETMON_INTFC
+Log file name (fixed) | -l logfile | NETMON_LOGFILE
+Prefix for log file (rolling) | -p prefix | NETMON_PREFIX
+seconds between samples | -s seconds | NETMON_SECONDS
 
 Regarding the network interface, if neither
 "-i" nor "NETMON_INTFC" is supplied, the tool will look
 for the file "/tmp/netmon.intfc". If it exists, it's
-contents will be used as the interface name. (Note
-that the env var overrides that file, and the "-i"
-option overrides both.)
+contents will be used as the interface name.
 
-Regarding the log file name, "-l" and "-p" are
+Regarding the log file, "-l" and "-p"
 should be considered mutually-exclusive.
 If both are supplied, "-l" overrides "-p".
 See next sections for more information on log files.

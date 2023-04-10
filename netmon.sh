@@ -14,29 +14,35 @@
 
 usage() {
   cat <<__EOF__ 1>&2
-Usage: netmon.sh [-h] [-i intfc] [-l logfile] [-s sleep]
+Usage: netmon.sh [-h] [-i intfc] [-l logfile] [-p prefix] [-s seconds]
 Where:
   -h help
   -i intfc - interface for ethtool; default: /tmp/netmon.intfc
-  -l log_prefix - Log file path to append day of week; default: /tmp/netmon.log
-  -s sleep - Seconds to wait between samples; default: 600 (10 min)
+  -l logfile - Log file path (no day of week appended).
+  -p prefix - Prefix path, appended with day of week; default: /tmp/netmon.log
+  -s seconds - Seconds to wait between samples; default: 600 (10 min)
 See https://github.com/fordsfords/netmon for more information.
 __EOF__
   exit 1
 }  # usage
 
 
-logroll() {
-  # See which log file it belongs in and delete it if it is last week's.
-  LOG="$LOG_PREFIX.`date +%a`"  # Append 3-letter day of week to log file prefix.
-  if MODTIME=`date -r $LOG +%s 2>/dev/null`; then :
-    NOWTIME=`date +%s`
-    LOG_AGE=`expr $NOWTIME - $MODTIME`
-    if [ $LOG_AGE -gt 518400 ]; then :  # more than 6 days old?
-      rm -f $LOG
+setlog() {
+  if [ -n "$LOGFILE" ]; then :
+    # -l logfile overrides all.
+    LOG="$LOGFILE"
+  else :
+    # Set the daily log file name and delete it if it's last week's.
+    LOG="$PREFIX.`date +%a`"  # Append 3-letter day of week to log file prefix.
+    if MODTIME=`date -r $LOG +%s 2>/dev/null`; then :
+      NOWTIME=`date +%s`
+      LOG_AGE=`expr $NOWTIME - $MODTIME`
+      if [ $LOG_AGE -gt 518400 ]; then :  # more than 6 days old?
+        rm -f $LOG
+      fi
     fi
   fi
-}  # logroll
+}  # setlog
 
 
 # Function to print a sample.
@@ -54,28 +60,32 @@ sample () {
 }  # sample
 
 
+# Set defaults.
 INTFC="$NETMON_INTFC"
 if [ -z "$INTFC" ]; then :
   if [ -f /tmp/netmon.intfc ]; then :
     INTFC=`cat /tmp/netmon.intfc`
   fi
 fi
-LOG_PREFIX="$NETMON_LOG_PREFIX"
-if [ -z "$LOG_PREFIX"]; then :
-  LOG_PREFIX="/tmp/netmon.log"
+LOGFILE="$NETMON_LOGFILE"
+PREFIX="$NETMON_PREFIX"
+if [ -z "$PREFIX"]; then :
+  PREFIX="/tmp/netmon.log"
 fi
-SLEEP="$NETMON_SLEEP"
-if [ -z "$SLEEP" ]; then :
-  SLEEP=600  # Sleep for 10 minutes between samples.
+SECONDS="$NETMON_SECONDS"
+if [ -z "$SECONDS" ]; then :
+  SECONDS=600  # Sleep for 10 minutes between samples.
 fi
 
+# Get command-line options.
 while getopts "hl:s:" OPTION
 do
   case $OPTION in
     h) usage ;;
     i) INTFC="$OPTARG" ;;
-    l) LOG_PREFIX="$OPTARG" ;;
-    s) SLEEP="$OPTARG" ;;
+    l) LOGFILE="$OPTARG" ;;
+    p) PREFIX="$OPTARG" ;;
+    s) SECONDS="$OPTARG" ;;
     \?) usage ;;
   esac
 done
@@ -98,7 +108,10 @@ else :
   ONLOAD=0
 fi
 
-logroll
+setlog
+if [ -n "$LOGFILE" ]; then :
+  cat /dev/null >$LOG
+fi
 
 echo "Starting netmon.sh on `hostname`, date=`date`" >>$LOG
 
@@ -114,11 +127,11 @@ trap "RUNNING=0" 1 2 3 15
 while [ "$RUNNING" -eq 1 ]; do :
   sample
 
-  echo "" >>$LOG; echo "Waiting for $SLEEP seconds" >>$LOG
-  END_SLEEP=`date +%s`; END_SLEEP=`expr $END_SLEEP + $SLEEP`
-  while [ "$RUNNING" -eq 1 -a `date +%s` -lt $END_SLEEP ]; do sleep 1; done
+  echo "" >>$LOG; echo "Waiting for $SECONDS seconds" >>$LOG
+  END_SECONDS=`date +%s`; END_SECONDS=`expr $END_SECONDS + $SECONDS`
+  while [ "$RUNNING" -eq 1 -a `date +%s` -lt $END_SECONDS ]; do sleep 1; done
 
-  logroll
+  setlog
 done
 
 echo "" >>$LOG; echo "Final sample" >>$LOG
