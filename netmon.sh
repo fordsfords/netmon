@@ -92,9 +92,9 @@ done
 shift `expr $OPTIND - 1`  # Make $1 the first positional param after options
 
 if [ -n "$INTFC" ]; then :
-  if ethtool -S $I >/dev/null; then :
+  if ethtool -S $INTFC >/dev/null; then :
   else :
-    echo "Warning, 'ethtool $INTFC' doesn't work; skipping ethtool"
+    echo "Warning, 'ethtool -S $INTFC' doesn't work; skipping ethtool"
     INTFC=""
   fi
 else :
