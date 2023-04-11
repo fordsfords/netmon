@@ -12,6 +12,7 @@ Monitoring script for hosts running UDP-intensive applications.
 - [Log File Fixed](#log-file-fixed)
 - [Graceful Exit](#graceful-exit)
 - [License](#license)
+
 <sup>(table of contents from https://luciopaiva.com/markdown-toc/)</sup>
 
 # Introduction

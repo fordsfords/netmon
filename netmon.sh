@@ -69,7 +69,7 @@ if [ -z "$INTFC" ]; then :
 fi
 LOGFILE="$NETMON_LOGFILE"
 PREFIX="$NETMON_PREFIX"
-if [ -z "$PREFIX"]; then :
+if [ -z "$PREFIX" ]; then :
   PREFIX="/tmp/netmon.log"
 fi
 SECONDS="$NETMON_SECONDS"
@@ -78,7 +78,7 @@ if [ -z "$SECONDS" ]; then :
 fi
 
 # Get command-line options.
-while getopts "hl:s:" OPTION
+while getopts "hi:l:p:s:" OPTION
 do
   case $OPTION in
     h) usage ;;
@@ -129,7 +129,7 @@ while [ "$RUNNING" -eq 1 ]; do :
 
   echo "" >>$LOG; echo "Waiting for $SECONDS seconds" >>$LOG
   END_SECONDS=`date +%s`; END_SECONDS=`expr $END_SECONDS + $SECONDS`
-  while [ "$RUNNING" -eq 1 -a `date +%s` -lt $END_SECONDS ]; do sleep 1; done
+  while [ "$RUNNING" -eq 1 -a `date +%s` -lt "$END_SECONDS" ]; do sleep 1; done
 
   setlog
 done
