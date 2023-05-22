@@ -27,7 +27,10 @@ __EOF__
 }  # usage
 
 
+# Figure out the current log file name. Call for every loop.
+# On a midnight crossing, the log file name will change.
 setlog() {
+  PREV_LOG="$LOG"
   if [ -n "$LOGFILE" ]; then :
     # -l logfile overrides all.
     LOG="$LOGFILE"
@@ -41,6 +44,17 @@ setlog() {
         rm -f $LOG
       fi
     fi
+  fi
+  if [ "$PREV_LOG" != "$LOG" ]; then :
+    # Either this is the first time running, or it's after midnight.
+    # Record basic system information.
+    echo "Starting $LOG on `hostname`, date=`date`" >>$LOG
+
+    echo "" >>$LOG; echo "uname -r" >>$LOG; uname -r >>$LOG 2>&1
+    echo "" >>$LOG; echo "cat /etc/os-release" >>$LOG; cat /etc/os-release >>$LOG 2>&1
+    echo "" >>$LOG; echo "uptime" >>$LOG; uptime >>$LOG 2>&1
+    echo "" >>$LOG; echo "sysctl net.core.rmem_max" >>$LOG; sysctl net.core.rmem_max >>$LOG 2>&1
+    echo "" >>$LOG; echo "lscpu" >>$LOG; lscpu >>$LOG 2>&1
   fi
 }  # setlog
 
@@ -72,9 +86,9 @@ PREFIX="$NETMON_PREFIX"
 if [ -z "$PREFIX" ]; then :
   PREFIX="/tmp/netmon.log"
 fi
-SECONDS="$NETMON_SECONDS"
-if [ -z "$SECONDS" ]; then :
-  SECONDS=600  # Sleep for 10 minutes between samples.
+SECS="$NETMON_SECS"
+if [ -z "$SECS" ]; then :
+  SECS=600  # Sleep for 10 minutes between samples.
 fi
 
 # Get command-line options.
@@ -85,11 +99,12 @@ do
     i) INTFC="$OPTARG" ;;
     l) LOGFILE="$OPTARG" ;;
     p) PREFIX="$OPTARG" ;;
-    s) SECONDS="$OPTARG" ;;
+    s) SECS="$OPTARG" ;;
     \?) usage ;;
   esac
 done
 shift `expr $OPTIND - 1`  # Make $1 the first positional param after options
+if [ -n "$1" ]; then echo "Error, unrecognized positional parameter '$1'" >&2; exit 1; fi
 
 if [ -n "$INTFC" ]; then :
   if ethtool -S $INTFC >/dev/null; then :
@@ -108,30 +123,22 @@ else :
   ONLOAD=0
 fi
 
-setlog
-if [ -n "$LOGFILE" ]; then :
-  cat /dev/null >$LOG
-fi
-
-echo "Starting netmon.sh on `hostname`, date=`date`" >>$LOG
-
-echo "" >>$LOG; echo "uname -r" >>$LOG; uname -r >>$LOG 2>&1
-echo "" >>$LOG; echo "cat /etc/os-release" >>$LOG; cat /etc/os-release >>$LOG 2>&1
-echo "" >>$LOG; echo "uptime" >>$LOG; uptime >>$LOG 2>&1
-echo "" >>$LOG; echo "sysctl net.core.rmem_max" >>$LOG; sysctl net.core.rmem_max >>$LOG 2>&1
-echo "" >>$LOG; echo "lscpu" >>$LOG; lscpu >>$LOG 2>&1
+LOG=""
 
 RUNNING=1
 trap "RUNNING=0" 1 2 3 15
 
+END_SECS=`date +%s`
 while [ "$RUNNING" -eq 1 ]; do :
+  setlog
   sample
 
-  echo "" >>$LOG; echo "Waiting for $SECONDS seconds" >>$LOG
-  END_SECONDS=`date +%s`; END_SECONDS=`expr $END_SECONDS + $SECONDS`
-  while [ "$RUNNING" -eq 1 -a `date +%s` -lt "$END_SECONDS" ]; do sleep 1; done
+  echo "" >>$LOG; echo "Waiting for $SECS seconds" >>$LOG
+  while [ "$RUNNING" -eq 1 -a `date +%s` -lt "$END_SECS" ]; do :
+    sleep 1
+  done
 
-  setlog
+  END_SECS=`expr $END_SECS + $SECS`
 done
 
 echo "" >>$LOG; echo "Final sample" >>$LOG
