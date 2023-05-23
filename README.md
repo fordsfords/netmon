@@ -36,15 +36,17 @@ Here's the help:
 Usage: netmon.sh [-h] [-i intfc] [-l logfile] [-p prefix] [-s seconds]
 Where:
   -h help
-  -i intfc - interface for ethtool; default: /tmp/netmon.intfc
-  -l logfile - Log file path (no day of week appended).
-  -p prefix - Prefix path, appended with day of week; default: /tmp/netmon.log
-  -s seconds - Seconds to wait between samples; default: 600 (10 min)
+  -i intfcs - interfaces for ethtool. Default: "*" (all running non-loopback).
+              If multiple interfaces, space-separate and enclose in quotes.
+              E.g. -i "en0 en1".
+  -l logfile - Log file path (fixed path, no day of week appended).
+  -p prefix - Prefix path, appended with day of week. Default: "/tmp/netmon.log"
+  -s seconds - Seconds to wait between samples. Default: 600 (10 min)
 See https://github.com/fordsfords/netmon for more information.
 ````
 
 netmon.sh is intended to be run in the background.
-As it starts up, it records the following information:
+As it writing to a log file, it records the following information:
 * uname -r
 * cat /etc/os-release
 * uptime
@@ -74,7 +76,7 @@ If both are supplied, the command-line options have priority.
 
 Item | Command-line Option | Environment Variable
 ---- | ------------------- | --------------------
-Network Interface | -i intfc | NETMON_INTFC
+Network Interfaces | -i intfcs | NETMON_INTFCS
 Log file name (fixed) | -l logfile | NETMON_LOGFILE
 Prefix for log file (rolling) | -p prefix | NETMON_PREFIX
 seconds between samples | -s seconds | NETMON_SECONDS
@@ -83,6 +85,15 @@ Regarding the network interface, if neither
 "-i" nor "NETMON_INTFC" is supplied, the tool will look
 for the file "/tmp/netmon.intfc". If it exists, it's
 contents will be used as the interface name.
+
+Multiple network interfaces can be specified,
+separated by spaces.
+If supplied on the command line,
+enclose in quotes.
+Also, the special interface name '*'
+can be specified to have netmon.sh
+use "ifconfig" to find all non-loopback
+running interfaces.
 
 Regarding the log file, "-l" and "-p"
 should be considered mutually-exclusive.

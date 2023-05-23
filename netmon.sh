@@ -14,10 +14,12 @@
 
 usage() {
   cat <<__EOF__ 1>&2
-Usage: netmon.sh [-h] [-i intfc] [-l logfile] [-p prefix] [-s seconds]
+Usage: netmon.sh [-h] [-i intfcs] ... [-l logfile] [-p prefix] [-s seconds]
 Where:
   -h help
-  -i intfc - interface for ethtool; default: /tmp/netmon.intfc
+  -i intfcs - interfaces for ethtool. Default: "*" (all running non-loopback).
+              If multiple interfaces, space-separate and enclose in quotes.
+              E.g. -i "en0 en1".
   -l logfile - Log file path (no day of week appended).
   -p prefix - Prefix path, appended with day of week; default: /tmp/netmon.log
   -s seconds - Seconds to wait between samples; default: 600 (10 min)
@@ -62,24 +64,37 @@ setlog() {
 # Function to print a sample.
 sample () {
   echo "" >>$LOG; echo "date=`date`" >>$LOG
+
   echo "" >>$LOG; echo "netstat -g -n" >>$LOG; netstat -g -n >>$LOG 2>&1
-  if [ -n "$INTFC" ]; then :
-    echo "" >>$LOG; echo "ethtool -S $INTFC" >>$LOG; ethtool -S $INTFC >>$LOG 2>&1
+
+  if [ -n "$GOOD_INTFCS" ]; then :
+    for I in $GOOD_INTFCS; do :
+      echo "" >>$LOG; echo "ethtool -S $I" >>$LOG; ethtool -S $I >>$LOG 2>&1
+    done
   fi
+
   if [ $ONLOAD -eq 1 ]; then :
     echo "" >>$LOG; echo "onload_stackdump lots" >>$LOG; onload_stackdump lots >>$LOG 2>&1
   fi
+
   echo "" >>$LOG; echo "ifconfig" >>$LOG; ifconfig >>$LOG 2>&1
+
   echo "" >>$LOG; echo "netstat -us" >>$LOG; netstat -us >>$LOG 2>&1
 }  # sample
 
 
 # Set defaults.
-INTFC="$NETMON_INTFC"
-if [ -z "$INTFC" ]; then :
+INTFCS="$NETMON_INTFCS"
+if [ -z "$INTFCS" ]; then :
+  INTFCS="$NETMON_INTFC"  # backward compatibility
+fi
+if [ -z "$INTFCS" ]; then :
   if [ -f /tmp/netmon.intfc ]; then :
-    INTFC=`cat /tmp/netmon.intfc`
+    INTFCS=`cat /tmp/netmon.intfc`
   fi
+fi
+if [ -z "$INTFCS" ]; then :
+  INTFCS="*"
 fi
 LOGFILE="$NETMON_LOGFILE"
 PREFIX="$NETMON_PREFIX"
@@ -96,7 +111,7 @@ while getopts "hi:l:p:s:" OPTION
 do
   case $OPTION in
     h) usage ;;
-    i) INTFC="$OPTARG" ;;
+    i) INTFCS="$OPTARG" ;;
     l) LOGFILE="$OPTARG" ;;
     p) PREFIX="$OPTARG" ;;
     s) SECS="$OPTARG" ;;
@@ -106,14 +121,21 @@ done
 shift `expr $OPTIND - 1`  # Make $1 the first positional param after options
 if [ -n "$1" ]; then echo "Error, unrecognized positional parameter '$1'" >&2; exit 1; fi
 
-if [ -n "$INTFC" ]; then :
-  if ethtool -S $INTFC >/dev/null; then :
-  else :
-    echo "Warning, 'ethtool -S $INTFC' doesn't work; skipping ethtool"
-    INTFC=""
-  fi
-else :
-  echo "Skipping ethtool"
+# All interfaces?
+if [ "$INTFCS" = "*" ]; then :
+  INTFCS=`ifconfig | sed -n '/^lo:/d;/RUNNING/s/^\([a-zA-Z0-9][^:]*\):.*RUNNING.*/\1/p'`
+fi
+
+# Use only the interfaces that work with ethtool.
+GOOD_INTFCS=""
+if [ -n "$INTFCS" ]; then :
+  for I in $INTFCS; do :
+    if ethtool -S $I >/dev/null; then :
+      GOOD_INTFCS="$GOOD_INTFCS $I"
+    else :
+      echo "Warning, 'ethtool -S $I' doesn't work; skipping interface"
+    fi
+  done
 fi
 
 if onload_stackdump >/dev/null 2>&1; then :
@@ -128,7 +150,8 @@ LOG=""
 RUNNING=1
 trap "RUNNING=0" 1 2 3 15
 
-END_SECS=`date +%s`
+NOW_SECS=`date +%s`
+END_SECS=`expr $NOW_SECS + $SECS`
 while [ "$RUNNING" -eq 1 ]; do :
   setlog
   sample
