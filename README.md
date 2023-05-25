@@ -145,6 +145,18 @@ It will wait up to one full second, do a final sample,
 and exit normally.
 
 
+# Daemonizing
+
+The scripts "netmon_start.sh", "netmon_stop.sh", and "netmon_check.sh" can
+be used to manage the execution of the "netmon.sh" tool.
+For example, "netmon_start.sh" and "netmon_stop.sh" might be used manually.
+
+The "netmon_check.sh" does the exact same thing as "netmon_start.sh"
+except that it does it quietly (i.e. no success message), making it
+suitable to run as a chron job to "keep it running".
+
+
+
 # License
 
 I want there to be NO barriers to using this code,

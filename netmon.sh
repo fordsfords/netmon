@@ -11,6 +11,14 @@
 
 # See https://github.com/fordsfords/netmon for more information.
 
+cd /  # Release working dir (good practice).
+
+PIDFILE="/tmp/netmon.pid"
+if echo "$$" >$PIDFILE; then :
+else :
+  echo "ERROR: could not write to $PIDFILE" >&2
+  exit 1
+fi
 
 usage() {
   cat <<__EOF__ 1>&2
@@ -50,8 +58,13 @@ setlog() {
   if [ "$PREV_LOG" != "$LOG" ]; then :
     # Either this is the first time running, or it's after midnight.
     # Record basic system information.
-    echo "Starting $LOG on `hostname`, date=`date`" >>$LOG
+    if echo "Starting $LOG on `hostname`, date=`date`" >>$LOG; then :
+    else :
+      echo "ERROR: could not write to $LOG" >&2
+      exit 1
+    fi
 
+    echo "" >>$LOG; echo "netmon: INTFCS='$INTFCS', LOGFILE='$LOGFILE', PREFIX='$PREFIX', SECS='$SECS'" >>$LOG
     echo "" >>$LOG; echo "uname -r" >>$LOG; uname -r >>$LOG 2>&1
     echo "" >>$LOG; echo "cat /etc/os-release" >>$LOG; cat /etc/os-release >>$LOG 2>&1
     echo "" >>$LOG; echo "uptime" >>$LOG; uptime >>$LOG 2>&1
@@ -63,7 +76,11 @@ setlog() {
 
 # Function to print a sample.
 sample () {
-  echo "" >>$LOG; echo "date=`date`" >>$LOG
+  if echo "" >>$LOG; echo "date=`date`" >>$LOG; then :
+  else :
+    echo "ERROR: could not write to $LOG" >&2
+    exit 1
+  fi
 
   echo "" >>$LOG; echo "netstat -g -n" >>$LOG; netstat -g -n >>$LOG 2>&1
 
@@ -71,6 +88,8 @@ sample () {
     for I in $GOOD_INTFCS; do :
       echo "" >>$LOG; echo "ethtool -S $I" >>$LOG; ethtool -S $I >>$LOG 2>&1
     done
+  else :
+    echo "" >>$LOG; echo "No valid interfaces supplied for ethtool" >>$LOG
   fi
 
   if [ $ONLOAD -eq 1 ]; then :
