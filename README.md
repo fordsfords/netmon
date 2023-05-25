@@ -149,12 +149,20 @@ and exit normally.
 
 The scripts "netmon_start.sh", "netmon_stop.sh", and "netmon_check.sh" can
 be used to manage the execution of the "netmon.sh" tool.
-For example, "netmon_start.sh" and "netmon_stop.sh" might be used manually.
+For example, "netmon_start.sh" and "netmon_stop.sh" are used manually.
+The "netmon_start.sh" lets you specify the daemon's command line options;
+enclose them in single quotes. For example:
+````
+netmon_start.sh '-s 300 -i "en0 en1"'
+````
+Be aware that "netmon_start.sh" does not validate those options.
 
-The "netmon_check.sh" does the exact same thing as "netmon_start.sh"
-except that it does it quietly (i.e. no success message), making it
-suitable to run as a chron job to "keep it running".
+The "netmon_check.sh" is intended to be used to simply restart the
+daemon if it isn't running.
+It's intended to be executed periodically as a cron job.
 
+If you use "netmon_stop.sh" to stop the daemon,
+the "netmon_check.sh" script will not restart it.
 
 
 # License
