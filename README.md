@@ -20,7 +20,8 @@ Monitoring script for hosts running UDP-intensive applications.
 Over the years, I've had many occasions where a network-intensive application
 had problems, and I've wanted information about the system on which it
 is running. Things like "netstat", "ethtool -S', and if Onload is being used,
-"onload_stackdump lots". Typically I just create an ad-hoc script that wakes
+"onload_stackdump lots" and "sfreport.pl".
+Typically I just create an ad-hoc script that wakes
 up every few minutes and runs the commands.
 
 More recently, I've been working with somebody else, and have made various
@@ -57,13 +58,24 @@ Then, it loops periodically, recording a "sample" consisting of:
 * netstat -g -n
 * ethtool -S <interface>
 * onload_stackdump lots
+* sfreport -
 * ifconfig
 * netstat -us
 
-Note that if the tool detects that ethtool or onload_stackdump
-doesn't work, it skips that non-working command. For example,
-if a host doesn't have Onload, the "onload_stackdump" is
-skipped.
+Note that if the tool detects that ethtool, onload_stackdump,
+or sfreport.pl don't work, it skips that non-working command(s).
+For example, if a host doesn't have Onload, the "onload_stackdump"
+and "sfreport.pl" are skipped.
+(You can also have a situation where "onload_stackdump" works but
+"sfreport.pl" is not present in PATH.
+You can download "sfreport.pl" util from the customer support site at:
+https://www.xilinx.com/support/download/nic-software-and-drivers.html#drivers-software
+Then under Linux, click on "Solarflare Linux diagnostics (sfreport)".
+As of May, 2023, the download file is
+"SF-108317-LS-7-Solarflare-Linux-diagnostic-sfreport.tgz";
+be aware that contrary to the file extension, it is NOT a zipped tar file.
+It is just a tar file containing "sfreport.pl".
+It should be untarred and placed in a location in root's PATH.)
 
 The tool will run until killed (with control-C or with "kill <pid>").
 

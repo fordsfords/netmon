@@ -13,6 +13,8 @@
 
 cd /  # Release working dir (good practice).
 
+WARNINGS=""
+
 PIDFILE="/tmp/netmon.pid"
 if echo "$$" >$PIDFILE; then :
 else :
@@ -70,6 +72,7 @@ setlog() {
     echo "" >>$LOG; echo "uptime" >>$LOG; uptime >>$LOG 2>&1
     echo "" >>$LOG; echo "sysctl net.core.rmem_max" >>$LOG; sysctl net.core.rmem_max >>$LOG 2>&1
     echo "" >>$LOG; echo "lscpu" >>$LOG; lscpu >>$LOG 2>&1
+    if [ -n "$WARNINGS" ]; then echo "$WARNINGS"  >>$LOG; fi
   fi
 }  # setlog
 
@@ -83,22 +86,32 @@ sample () {
   fi
 
   echo "" >>$LOG; echo "netstat -g -n" >>$LOG; netstat -g -n >>$LOG 2>&1
+  echo "end netstat -g -n" >>$LOG
 
   if [ -n "$GOOD_INTFCS" ]; then :
     for I in $GOOD_INTFCS; do :
       echo "" >>$LOG; echo "ethtool -S $I" >>$LOG; ethtool -S $I >>$LOG 2>&1
+      echo "end ethtool -S $I" >>$LOG
     done
   else :
     echo "" >>$LOG; echo "No valid interfaces supplied for ethtool" >>$LOG
   fi
 
+  if [ -n "$SFREPORT" ]; then :
+    echo "" >>$LOG; echo "perl $SFREPORT -" >>$LOG; perl $SFREPORT - >>$LOG 2>&1
+    echo "end perl $SFREPORT -" >>$LOG
+  fi
+
   if [ $ONLOAD -eq 1 ]; then :
     echo "" >>$LOG; echo "onload_stackdump lots" >>$LOG; onload_stackdump lots >>$LOG 2>&1
+    echo "end onload_stackdump lots" >>$LOG
   fi
 
   echo "" >>$LOG; echo "ifconfig" >>$LOG; ifconfig >>$LOG 2>&1
+  echo "end ifconfig" >>$LOG
 
-  echo "" >>$LOG; echo "netstat -us" >>$LOG; netstat -us >>$LOG 2>&1
+  echo "" >>$LOG; echo "netstat -s" >>$LOG; netstat -s >>$LOG 2>&1
+  echo "end netstat -s" >>$LOG
 }  # sample
 
 
@@ -160,8 +173,16 @@ fi
 if onload_stackdump >/dev/null 2>&1; then :
   ONLOAD=1
 else :
-  echo "Onload_stackdump not working"
   ONLOAD=0
+  WARNINGS="$WARNINGS
+Warning: onload_stackdump not present or returns bad status"
+fi
+
+# If sfreport.pl not in PATH, SFREPORT will be empty.
+SFREPORT="`which sfreport.pl 2>/dev/null`"
+if [ -z "$SFREPORT" ]; then :
+  WARNINGS="$WARNINGS
+Warning: sfreport.pl not found in PATH"
 fi
 
 LOG=""
