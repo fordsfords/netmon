@@ -67,12 +67,12 @@ setlog() {
     fi
 
     echo "" >>$LOG; echo "netmon: INTFCS='$INTFCS', LOGFILE='$LOGFILE', PREFIX='$PREFIX', SECS='$SECS'" >>$LOG
+    if [ -n "$WARNINGS" ]; then echo "$WARNINGS"  >>$LOG; fi
     echo "" >>$LOG; echo "uname -r" >>$LOG; uname -r >>$LOG 2>&1
     echo "" >>$LOG; echo "cat /etc/os-release" >>$LOG; cat /etc/os-release >>$LOG 2>&1
     echo "" >>$LOG; echo "uptime" >>$LOG; uptime >>$LOG 2>&1
     echo "" >>$LOG; echo "sysctl net.core.rmem_max" >>$LOG; sysctl net.core.rmem_max >>$LOG 2>&1
     echo "" >>$LOG; echo "lscpu" >>$LOG; lscpu >>$LOG 2>&1
-    if [ -n "$WARNINGS" ]; then echo "$WARNINGS"  >>$LOG; fi
   fi
 }  # setlog
 
@@ -102,7 +102,7 @@ sample () {
     echo "end perl $SFREPORT -" >>$LOG
   fi
 
-  if [ $ONLOAD -eq 1 ]; then :
+  if [ $STACKDUMP -eq 1 ]; then :
     echo "" >>$LOG; echo "onload_stackdump lots" >>$LOG; onload_stackdump lots >>$LOG 2>&1
     echo "end onload_stackdump lots" >>$LOG
   fi
@@ -171,9 +171,9 @@ if [ -n "$INTFCS" ]; then :
 fi
 
 if onload_stackdump >/dev/null 2>&1; then :
-  ONLOAD=1
+  STACKDUMP=1
 else :
-  ONLOAD=0
+  STACKDUMP=0
   WARNINGS="$WARNINGS
 Warning: onload_stackdump not present or returns bad status"
 fi
