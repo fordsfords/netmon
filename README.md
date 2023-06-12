@@ -47,8 +47,8 @@ and "nothing" is what most customers do.
 
 One concern that many people have regarding monitoring tools is how much
 the act of monitoring affects the system being monitored.
-In particular, customers are worried about monitoring introducing
-latency and possibly even causing loss.
+In particular, customers are worried about network monitoring introducing
+message latency and possibly even causing packet loss.
 
 I am not an expert in these matters.
 For example, I do not know how invasive "ethtool -S" is.
