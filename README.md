@@ -37,11 +37,12 @@ Typically I just create an ad-hoc script that wakes
 up every few minutes and runs the commands.
 
 More recently, I've been working with a customer
-and have made various improvements to the typical ad-hoc script. 
-I'm sure there are much better monitoring tools out there that I'm
-not familiar with.
-But this is better than nothing,
-and "nothing" is what most customers do.
+and have made various improvements to my ad-hoc script,
+and decided it deserved a repository.
+I'm sure there are much better monitoring tools out there
+that generate pretty reports with fancy graphs,
+but this is better than nothing.
+(And "nothing" is what most people do.)
 
 ## Impact
 
@@ -54,14 +55,24 @@ I am not an expert in these matters.
 For example, I do not know how invasive "ethtool -S" is.
 Same with "onload_stackdump".
 I have spoken with a Solarflare engineer who has assured me that
-the monitoring tools used by this repo have minimal impact.
+the monitoring tools used by this repo have insignificant impact.
 I was advised against trying to run them multiple times per second,
 but that running them every few minutes would be fine.
 Given that Solarflare's customers are typically VERY concerned about latency,
 I am inclined to trust Solarflare's judgment in this matter.
 
 But since my information is second-hand,
-I cannot certify any particular claims of "insignificant impact".
+I cannot certify claims of "insignificant impact".
+
+That said, the diagnostic value of doing this kind of minitoring is high.
+You can't decide to turn it on after you notice a network problem;
+most of the counters sampled here are cumulative.
+You need "before" and "after" samples.
+If you're worried about the impact of these tools,
+configure it to run once an hour.
+You won't get good granulatiry,
+but hourly data is infinitely better than no data.
+(And see [netmon_sample.sh](#netmon_samplesh).)
 
 # Usage:
 
