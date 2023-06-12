@@ -11,12 +11,13 @@ Monitoring script for hosts running UDP-intensive applications.
   - [netmon.sh](#netmonsh)
   - [netmon_start.sh](#netmon_startsh)
   - [netmon_check.sh](#netmon_checksh)
+  - [netmon_sample.sh](#netmon_samplesh)
   - [netmon_stop.sh](#netmon_stopsh)
 - [Design](#design)
   - [Interpretation of Data](#interpretation-of-data)
     - [Nodesc Drops](#nodesc-drops)
     - [Onload Oflow Drops](#onload-oflow-drops)
-    - [Mem Drops](#mem-drops)
+    - [Onload Mem Drops](#onload-mem-drops)
     - [UDP Receive Errors](#udp-receive-errors)
 - [Configuration](#configuration)
 - [Log File: Rolling](#log-file-rolling)
@@ -109,7 +110,7 @@ Those command-line parameters must be enclosed in single quotes.
 For example:
 
 ````
-./netmon_start.sh '-s 300 -i "en0 en1"'
+$ ./netmon_start.sh '-s 300 -i "en0 en1"'
 ````
 
 This records the netmon options in "/tmp/netmon.args".
@@ -118,10 +119,11 @@ and it will re-use the saved ones.
 For example:
 
 `````
-./netmon_stop.sh
-./netmon_start.sh
+$ ./netmon_start.sh '-s 300'
+$ ./netmon_stop.sh
+$ ./netmon_start.sh
+Using /tmp/netmon.args.stopped
 `````
-The start line will re-use the options stored in "/tmp/netmon.args".
 
 ## netmon_check.sh
 
@@ -130,10 +132,44 @@ periodically (perhaps hourly) as a cron job.
 It checks to see if netmon should be running and restarts it if needed.
 This is useful after a system reboot.
 
+No command-line parameters are permitted.
+
+````
+$ ./netmon_start.sh '-s 300'
+$ kill -9 `cat /tmp/netmon.pid`  # abnormally stop
+$ ./netmon_check.sh
+````
+The netmon check restarts the abnormally killed daemon.
+
+## netmon_sample.sh
+
+The "netmon_sample.sh" script tells the netmon daemon to
+generate an extra sample (using the USR1 signal).
+This can be useful if the daemon was configured to run infrequently,
+and you notice a network-related incident.
+Generating extra samples can give more-timely information.
+
+No command-line parameters are permitted.
+
+````
+$ ./netmon_sample.sh
+````
+
+Note that it might take a second for netmon to respond.
+
 ## netmon_stop.sh
 
 The "netmon_stop.sh" script not only stops the daemon,
-but also prevents the "netmon_check.sh" script from restarting it.
+but also prevents the "netmon_check.sh" script from restarting it
+by renaming "/tmp/netmon.args" to "/tmp/netmon.args.stopped".
+
+No command-line parameters are permitted.
+
+````
+$ ./netmon_stop.sh
+````
+
+Note that it might take a second for netmon to respond.
 
 # Design
 
@@ -205,7 +241,7 @@ It indicates socket buffer overflow.
 Either this application needs to handle incoming messages faster,
 or you need to increase the size of the socket buffer.
 
-### Mem Drops
+### Onload Mem Drops
 
 ````
   rcv: oflow_drop=0(0%) mem_drop=700 eagain=0 pktinfo=0 q_max_pkts=99
@@ -231,6 +267,14 @@ overflow.
 Note that sockets that are accelerated using Onload do NOT update
 this counter.
 This is for applications running without Onload.
+
+Note that the output of "netstat -us" can vary with the version of Linux.
+Here's another possible output:
+````
+Udp:
+    ...
+    0 receive buffer errors
+````
 
 Either this application needs to handle incoming messages faster,
 or you need to increase the size of the socket buffer.

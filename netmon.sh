@@ -188,7 +188,9 @@ fi
 LOG=""
 
 RUNNING=1
-trap "RUNNING=0" 1 2 3 15
+trap "RUNNING=0" HUP INT QUIT TERM
+SAMPLE=0
+trap "SAMPLE=1" USR1
 
 NOW_SECS=`date +%s`
 END_SECS=`expr $NOW_SECS + $SECS`
@@ -199,6 +201,11 @@ while [ "$RUNNING" -eq 1 ]; do :
   echo "" >>$LOG; echo "Waiting for $SECS seconds" >>$LOG
   while [ "$RUNNING" -eq 1 -a `date +%s` -lt "$END_SECS" ]; do :
     sleep 1
+    if [ "$SAMPLE" -eq 1 ]; then :
+      echo "" >>$LOG; echo "USR1 sample" >>$LOG
+      sample
+      SAMPLE=0
+    fi
   done
 
   END_SECS=`expr $END_SECS + $SECS`
