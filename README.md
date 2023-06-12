@@ -6,10 +6,21 @@ Monitoring script for hosts running UDP-intensive applications.
 - [netmon](#netmon)
 - [Table of contents](#table-of-contents)
 - [Introduction](#introduction)
+  - [Impact](#impact)
 - [Usage:](#usage)
+  - [netmon.sh](#netmonsh)
+  - [netmon_start.sh](#netmon_startsh)
+  - [netmon_check.sh](#netmon_checksh)
+  - [netmon_stop.sh](#netmon_stopsh)
+- [Design](#design)
+  - [Interpretation of Data](#interpretation-of-data)
+    - [Nodesc Drops](#nodesc-drops)
+    - [Onload Oflow Drops](#onload-oflow-drops)
+    - [Mem Drops](#mem-drops)
+    - [UDP Receive Errors](#udp-receive-errors)
 - [Configuration](#configuration)
-- [Log File Rolling](#log-file-rolling)
-- [Log File Fixed](#log-file-fixed)
+- [Log File: Rolling](#log-file-rolling)
+- [Log File: Fixed](#log-file-fixed)
 - [Graceful Exit](#graceful-exit)
 - [License](#license)
 
@@ -24,15 +35,53 @@ is running. Things like "netstat", "ethtool -S', and if Onload is being used,
 Typically I just create an ad-hoc script that wakes
 up every few minutes and runs the commands.
 
-More recently, I've been working with somebody else, and have made various
-improvements to the typical ad-hoc script. So I decided to put it up,
-not so much because I think it is a ready-for-prime-time monitoring tool,
-but more because it has a few little scripting features that I want to
-remember for the future.
+More recently, I've been working with a customer
+and have made various improvements to the typical ad-hoc script. 
+I'm sure there are much better monitoring tools out there that I'm
+not familiar with.
+But this is better than nothing,
+and "nothing" is what most customers do.
+
+## Impact
+
+One concern that many people have regarding monitoring tools is how much
+the act of monitoring affects the system being monitored.
+In particular, customers are worried about monitoring introducing
+latency and possibly even causing loss.
+
+I am not an expert in these matters.
+For example, I do not know how invasive "ethtool -S" is.
+Same with "onload_stackdump".
+I have spoken with a Solarflare engineer who has assured me that
+the monitoring tools used by this repo have minimal impact.
+I was advised against trying to run them multiple times per second,
+but that running them every few minutes would be fine.
+Given that Solarflare's customers are typically VERY concerned about latency,
+I am inclined to trust Solarflare's judgment in this matter.
+
+But since my information is second-hand,
+I cannot certify any particular claims of "insignificant impact".
 
 # Usage:
 
-Here's the help:
+Some people have the attitude that they start monitoring tools running
+the moment they detect a bad behavior.
+
+This approach is barely useful.
+
+Most of the tools exercised by "netmon" have cumulative counters,
+so you need a sample of the counters both before and after the incident.
+Since you probably can't predict when an incident will happen,
+the best approach is to leave the tool running continuously on all
+hosts that run network-intensive applications.
+
+The tool is designed to roll the log file by day of week,
+so you won't have an infinitely-growing log file that requires
+periodic purging.
+
+## netmon.sh
+
+Here's the help from the netmon.sh tool:
 ````
 Usage: netmon.sh [-h] [-i intfc] [-l logfile] [-p prefix] [-s seconds]
 Where:
@@ -46,8 +95,50 @@ Where:
 See https://github.com/fordsfords/netmon for more information.
 ````
 
+## netmon_start.sh
+
+To assist in running the tool continuously,
+there is a "netmon_start.sh" script that starts the monitoring
+script as a daemon (e.g. you can log out and the daemon will continue
+running).
+
+The "netmon_start.sh" tool also records the desired command-line parameters
+of "netmon.sh" so that it can be restarted easily with the same settings.
+Those command-line parameters must be enclosed in single quotes.
+
+For example:
+
+````
+./netmon_start.sh '-s 300 -i "en0 en1"'
+````
+
+This records the netmon options in "/tmp/netmon.args".
+Subsequently, you can stop and restart the tool without options
+and it will re-use the saved ones.
+For example:
+
+`````
+./netmon_stop.sh
+./netmon_start.sh
+`````
+The start line will re-use the options stored in "/tmp/netmon.args".
+
+## netmon_check.sh
+
+The "netmon_check.sh" script is intended to be run
+periodically (perhaps hourly) as a cron job.
+It checks to see if netmon should be running and restarts it if needed.
+This is useful after a system reboot.
+
+## netmon_stop.sh
+
+The "netmon_stop.sh" script not only stops the daemon,
+but also prevents the "netmon_check.sh" script from restarting it.
+
+# Design
+
 netmon.sh is intended to be run in the background.
-As it writing to a log file, it records the following information:
+As it is writing to a log file, it records the following information:
 * uname -r
 * cat /etc/os-release
 * uptime
@@ -77,8 +168,72 @@ be aware that contrary to the file extension, it is NOT a zipped tar file.
 It is just a tar file containing "sfreport.pl".
 It should be untarred and placed in a location in root's PATH.)
 
-The tool will run until killed (with control-C or with "kill <pid>").
+## Interpretation of Data
 
+It is beyond the scope of this repository to teach you how to diagnose a wide
+variety of network problems using the output of netmon.
+For Solarflare-specific output (onload_stackdump, sfreport, ethtool)
+I recommend contacting Solarflare support directly.
+
+That said, here are some specific things I often look for:
+
+### Nodesc Drops
+
+````
+port_rx_nodesc_drops: 946553
+````
+This is part of "ethtool" output for Solarflare NICs and is short
+for "no (receive) descriptor drops".
+It indicates that packets are arriving faster than the driver can
+process them.
+The NIC has a limited number of receive descriptors that hold
+received packets until the driver can retrieve them.
+
+If you are getting nodesc drops, the first thing to do is ensure
+that you configure the NIC for the maximum number of receive descriptors,
+which is 4096 for all versions of the NIC that I'm familiar with.
+
+### Onload Oflow Drops
+
+````
+  rcv: oflow_drop=0(0%) mem_drop=700 eagain=0 pktinfo=0 q_max_pkts=99
+````
+This is part of "onload_stackdump lots" output for Solarflare NICs
+being used with Onload.
+It indicates socket buffer overflow.
+
+Either this application needs to handle incoming messages faster,
+or you need to increase the size of the socket buffer.
+
+### Mem Drops
+
+````
+  rcv: oflow_drop=0(0%) mem_drop=700 eagain=0 pktinfo=0 q_max_pkts=99
+````
+This is part of "onload_stackdump lots" output for Solarflare NICs
+being used with Onload.
+It usually indicates that too much memory is being held in non-empty
+socket buffers.
+
+Either the applications on this host need to handle collectively
+incoming messages faster,
+or you need to increase the amount of memory available to Onload.
+
+### UDP Receive Errors
+
+````
+Udp:
+    ...
+    0 packet receive errors
+````
+This is part of "netstat -us" output and usually indicates socket buffer
+overflow.
+Note that sockets that are accelerated using Onload do NOT update
+this counter.
+This is for applications running without Onload.
+
+Either this application needs to handle incoming messages faster,
+or you need to increase the size of the socket buffer.
 
 # Configuration
 
@@ -95,7 +250,7 @@ seconds between samples | -s seconds | NETMON_SECONDS
 
 Regarding the network interface, if neither
 "-i" nor "NETMON_INTFC" is supplied, the tool will look
-for the file "/tmp/netmon.intfc". If it exists, it's
+for the file "/tmp/netmon.intfc". If it exists, its
 contents will be used as the interface name.
 
 Multiple network interfaces can be specified,
@@ -108,12 +263,12 @@ use "ifconfig" to find all non-loopback
 running interfaces.
 
 Regarding the log file, "-l" and "-p"
-should be considered mutually-exclusive.
+should be considered mutually exclusive.
 If both are supplied, "-l" overrides "-p".
 See next sections for more information on log files.
 
 
-# Log File Rolling
+# Log File: Rolling
 
 The default intent is to keep a week's worth of historical data.
 
@@ -127,7 +282,7 @@ netmon.sh on a Monday, the output will be written to the file
 the first time it goes to write a sample on Tuesday, it will write
 to "/tmp/netmon.log.Tue". Six days later, on Sunday night,
 as the time passes midnight and it becomes Monday again, the
-"/tmp/netmon.log.Mon" file will be deleted and re-craeted with
+"/tmp/netmon.log.Mon" file will be deleted and re-created with
 the next sample.
 
 Let's say you supply your own log prefix with "-p /tmp/mymon"
@@ -135,7 +290,7 @@ Let's say you supply your own log prefix with "-p /tmp/mymon"
 On Monday, it will write to "/tmp/mymon.Mon".
 
 
-# Log File Fixed
+# Log File: Fixed
 
 Alternatively, you can provide the full log file name using
 "-l" or the environment variable "NETMON_LOGFILE", and no
@@ -155,26 +310,8 @@ the log file when netmon starts.
 The tool sets up a trap handler for control-C and kill.
 It will wait up to one full second, do a final sample,
 and exit normally.
-
-
-# Daemonizing
-
-The scripts "netmon_start.sh", "netmon_stop.sh", and "netmon_check.sh" can
-be used to manage the execution of the "netmon.sh" tool.
-For example, "netmon_start.sh" and "netmon_stop.sh" are used manually.
-The "netmon_start.sh" lets you specify the daemon's command line options;
-enclose them in single quotes. For example:
-````
-netmon_start.sh '-s 300 -i "en0 en1"'
-````
-Be aware that "netmon_start.sh" does not validate those options.
-
-The "netmon_check.sh" is intended to be used to simply restart the
-daemon if it isn't running.
-It's intended to be executed periodically as a cron job.
-
-If you use "netmon_stop.sh" to stop the daemon,
-the "netmon_check.sh" script will not restart it.
+The "netmon_stop.sh" uses kill to perform the
+graceful exit.
 
 
 # License
@@ -192,8 +329,8 @@ Copyright 2022-2022 Steven Ford http://geeky-boy.com and licensed
 To the extent possible under law, the contributors to this project have
 waived all copyright and related or neighboring rights to this work.
 In other words, you can use this code for any purpose without any
-restrictions.  This work is published from: United States.  The project home
+restrictions. This work is published from: United States. The project home
 is https://github.com/fordsfords/netmon
 
 To contact me, Steve Ford, project owner, you can find my email address
-at http://geeky-boy.com.  Can't see it?  Keep looking.
+at http://geeky-boy.com. Can't see it?  Keep looking.
