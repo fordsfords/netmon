@@ -165,7 +165,8 @@ if [ -n "$INTFCS" ]; then :
     if ethtool -S $I >/dev/null; then :
       GOOD_INTFCS="$GOOD_INTFCS $I"
     else :
-      echo "Warning, 'ethtool -S $I' doesn't work; skipping interface"
+      WARNINGS="$WARNINGS
+Warning: 'ethtool -S $I' doesn't work; skipping interface"
     fi
   done
 fi
