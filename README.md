@@ -3,29 +3,30 @@
 Monitoring script for hosts running UDP-intensive applications.
 
 # Table of contents
-- [netmon](#netmon)
-- [Table of contents](#table-of-contents)
-- [Introduction](#introduction)
-  - [Impact](#impact)
-- [Usage:](#usage)
-  - [netmon.sh](#netmonsh)
-  - [netmon_start.sh](#netmon_startsh)
-  - [netmon_check.sh](#netmon_checksh)
-  - [netmon_sample.sh](#netmon_samplesh)
-  - [netmon_stop.sh](#netmon_stopsh)
-- [Design](#design)
-  - [Interpretation of Data](#interpretation-of-data)
-    - [Nodesc Drops](#nodesc-drops)
-    - [Onload Oflow Drops](#onload-oflow-drops)
-    - [Onload Mem Drops](#onload-mem-drops)
-    - [UDP Receive Errors](#udp-receive-errors)
-- [Configuration](#configuration)
-- [Log File: Rolling](#log-file-rolling)
-- [Log File: Fixed](#log-file-fixed)
-- [Graceful Exit](#graceful-exit)
-- [License](#license)
-
-<sup>(table of contents from https://luciopaiva.com/markdown-toc/)</sup>
+<!-- mdtoc-start -->
+&DoubleRightArrow; [netmon](#netmon)  
+&DoubleRightArrow; [Table of contents](#table-of-contents)  
+&DoubleRightArrow; [Introduction](#introduction)  
+&nbsp;&nbsp;&DoubleRightArrow; [Impact](#impact)  
+&DoubleRightArrow; [Usage:](#usage)  
+&nbsp;&nbsp;&DoubleRightArrow; [netmon.sh](#netmonsh)  
+&nbsp;&nbsp;&DoubleRightArrow; [netmon_start.sh](#netmonstartsh)  
+&nbsp;&nbsp;&DoubleRightArrow; [netmon_check.sh](#netmonchecksh)  
+&nbsp;&nbsp;&DoubleRightArrow; [netmon_sample.sh](#netmonsamplesh)  
+&nbsp;&nbsp;&DoubleRightArrow; [netmon_stop.sh](#netmonstopsh)  
+&DoubleRightArrow; [Design](#design)  
+&nbsp;&nbsp;&DoubleRightArrow; [Interpretation of Data](#interpretation-of-data)  
+&nbsp;&nbsp;&nbsp;&nbsp;&DoubleRightArrow; [Nodesc Drops](#nodesc-drops)  
+&nbsp;&nbsp;&nbsp;&nbsp;&DoubleRightArrow; [Onload Oflow Drops](#onload-oflow-drops)  
+&nbsp;&nbsp;&nbsp;&nbsp;&DoubleRightArrow; [Onload Mem Drops](#onload-mem-drops)  
+&nbsp;&nbsp;&nbsp;&nbsp;&DoubleRightArrow; [UDP Receive Errors](#udp-receive-errors)  
+&DoubleRightArrow; [Configuration](#configuration)  
+&DoubleRightArrow; [Log File: Rolling](#log-file-rolling)  
+&DoubleRightArrow; [Log File: Fixed](#log-file-fixed)  
+&DoubleRightArrow; [Graceful Exit](#graceful-exit)  
+&DoubleRightArrow; [License](#license)  
+<!-- TOC created by '../mdtoc/mdtoc.pl README.md' (see https://github.com/fordsfords/mdtoc) -->
+<!-- mdtoc-end -->
 
 # Introduction
 
